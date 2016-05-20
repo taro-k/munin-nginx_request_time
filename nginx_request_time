@@ -100,7 +100,8 @@ my $log_handle = File::ReadBackwards->new($LOG);
 for (my $i = 0; $i < $line_counter; $i++) {
   my $log_line = $log_handle->readline;
   if (defined($log_line)) {
-    my $time_s = (split "\t", $log_line)[2];
+    $log_line =~ /\s[\S]+$/;
+    my $time_s = $&;
     if (!defined($time_s)) { next; }
     push @request_time_array, $time_s * 1000;
   } else {
