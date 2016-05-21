@@ -97,12 +97,39 @@ EOS
 
 my @request_time_array = ();
 my $log_handle = File::ReadBackwards->new($LOG);
+
+# Get local time and calculate one in seconds.
+($localSS,$localMM,$localHH,$localDD) = localtime(time);
+my $localTimeSec = $localHH*3600 + $localMM*60 + $localSS;
+
 for (my $i = 0; $i < $line_counter; $i++) {
   my $log_line = $log_handle->readline;
   if (defined($log_line)) {
     $log_line =~ /\s[\S]+$/;
+
+    # Pull out the request time.
     my $time_s = $&;
+    # Pull out the part of time stamp.
+    my $logTime = (split " ", $log_line)[3];
+
+    ($logDD, $logHH, $logMM, $logSS)
+    =$logTime =~ /\[([0-9]{2})\/.+\/[0-9]{4}:([0-9]{2}):([0-9]{2}):([0-9]{2})/;
+    my $logTimeSec = $logHH*3600 + $logMM*60 + $logSS;
+    my $diffSec = $localTimeSec - $logTimeSec;
+
+    # Percentile doesn't work if the size of array is not more than 1.
+    # Abort when the time difference gets greater than 5 min.
+    if ($diffSec > 300 && @request_time_array>1) { last; }
+    # Abort when the time difference gets minus.
+    if ($diffSec < 0 && @request_time_array>1) { last; }
+    # Abort when date of log line gets different from now
+    # although this is not perfect logic.
+    if ($localDD != $logDD && @request_time_array>1) { last; }
+
     if (!defined($time_s)) { next; }
+    # Skip the record with zero request time.
+    if ($time_s == 0.0) { next; }
+
     push @request_time_array, $time_s * 1000;
   } else {
     last;
