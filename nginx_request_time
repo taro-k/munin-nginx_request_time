@@ -117,14 +117,20 @@ for (my $i = 0; $i < $line_counter; $i++) {
     my $logTimeSec = $logHH*3600 + $logMM*60 + $logSS;
     my $diffSec = $localTimeSec - $logTimeSec;
 
-    # Percentile doesn't work if the size of array is not more than 1.
-    # Abort when the time difference gets greater than 5 min.
-    if ($diffSec > 300 && @request_time_array>1) { last; }
-    # Abort when the time difference gets minus.
-    if ($diffSec < 0 && @request_time_array>1) { last; }
-    # Abort when date of log line gets different from now
+    # Abort if the time difference gets greater than 5 min,
+    # or if the time difference gets minus,
+    # or if the date of log line gets different from now,
     # although this is not perfect logic.
-    if ($localDD != $logDD && @request_time_array>1) { last; }
+    if ($diffSec > 300 || $diffSec < 0 || $localDD != $logDD) {
+      # Percentile doesn't work if the size of array is not more than 1.
+      if (@request_time_array == 0) {
+        push @request_time_array, 0.0;
+      }
+      if (@request_time_array == 1) {
+        push @request_time_array, $request_time_array[0];
+      }
+      last;
+    }
 
     if (!defined($time_s)) { next; }
     # Skip the record with zero request time.
